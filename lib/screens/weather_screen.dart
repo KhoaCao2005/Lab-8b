@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/weather.dart';
 import '../services/weather_service.dart';
+import 'home_screen.dart';
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -60,6 +61,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
     _removeOverlay();
     _cityController.text = location.name;
     FocusScope.of(context).unfocus();
+
     setState(() {
       _selectedDayIndex = 0;
       _weatherFuture = _weatherService.fetchWeatherByCoords(
@@ -73,16 +75,20 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
+
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       if (query.trim().isEmpty) {
         _removeOverlay();
         return;
       }
+
       final results = await _weatherService.searchCities(query);
+
       if (mounted) {
         setState(() {
           _searchResults = results;
         });
+
         _showOverlay();
       }
     });
@@ -90,6 +96,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   void _showOverlay() {
     _removeOverlay();
+
     if (_searchResults.isEmpty) return;
 
     _overlayEntry = OverlayEntry(
@@ -111,6 +118,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   const Divider(color: Colors.white12, height: 1),
               itemBuilder: (context, index) {
                 final city = _searchResults[index];
+
                 return ListTile(
                   dense: true,
                   title: Text(
@@ -144,10 +152,12 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   String _toTitleCase(String text) {
     if (text.isEmpty) return '';
+
     return text
         .split(' ')
         .map((word) {
           if (word.isEmpty) return word;
+
           return word[0].toUpperCase() + word.substring(1).toLowerCase();
         })
         .join(' ');
@@ -157,6 +167,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
     if (!_isCelsius) {
       temp = (temp * 9 / 5) + 32;
     }
+
     return '${temp.round()}°';
   }
 
@@ -181,6 +192,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
     ];
 
     final index = ((deg + 11.25) / 22.5).floor() % 16;
+
     return directions[index];
   }
 
@@ -191,30 +203,38 @@ class _WeatherScreenState extends State<WeatherScreen> {
     int timezoneOffset,
   ) {
     final Map<String, List<ForecastItem>> grouped = {};
+
     for (var item in hourly) {
       final date = DateTime.fromMillisecondsSinceEpoch(
         item.dt * 1000,
         isUtc: true,
       ).add(Duration(seconds: timezoneOffset));
+
       final dayStr = DateFormat('yyyy-MM-dd').format(date);
+
       grouped.putIfAbsent(dayStr, () => []).add(item);
     }
 
     final List<ForecastItem> result = [];
+
     grouped.forEach((dayStr, items) {
       ForecastItem bestItem = items.first;
       int minDiff = 24;
+
       for (var item in items) {
         final date = DateTime.fromMillisecondsSinceEpoch(
           item.dt * 1000,
           isUtc: true,
         ).add(Duration(seconds: timezoneOffset));
+
         int diff = (date.hour - 12).abs();
+
         if (diff < minDiff) {
           minDiff = diff;
           bestItem = item;
         }
       }
+
       result.add(bestItem);
     });
 
@@ -267,6 +287,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                           } else if (snapshot.hasData) {
                             return _buildDashboard(snapshot.data!);
                           }
+
                           return const SizedBox.shrink();
                         },
                       ),
@@ -294,6 +315,20 @@ class _WeatherScreenState extends State<WeatherScreen> {
             spacing: 12,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              IconButton(
+                tooltip: 'Home',
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  );
+                },
+                icon: const Icon(
+                  Icons.home_outlined,
+                  color: Colors.white,
+                  size: 25,
+                ),
+              ),
               const Text(
                 'Weather forecast',
                 style: TextStyle(
@@ -438,9 +473,11 @@ class _WeatherScreenState extends State<WeatherScreen> {
             ).add(Duration(seconds: timezoneOffset));
 
             final isSelected = index == _selectedDayIndex;
+
             final dayName = index == 0
                 ? 'Today'
                 : DateFormat('EEE').format(date);
+
             final tempVal = day.temperature.round();
 
             return GestureDetector(
@@ -528,12 +565,15 @@ class _WeatherScreenState extends State<WeatherScreen> {
     List<ForecastItem> daily,
   ) {
     final isTodaySelected = _selectedDayIndex == 0;
+
     final double temp = isTodaySelected
         ? data.current.temperature
         : daily[_selectedDayIndex].temperature;
+
     final double feelsLike = isTodaySelected
         ? data.current.feelsLike
         : daily[_selectedDayIndex].feelsLike;
+
     final String description = isTodaySelected
         ? data.current.description
         : daily[_selectedDayIndex].description;
@@ -616,6 +656,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             final crossAxisCount = constraints.maxWidth < 400 ? 2 : 3;
+
             return GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
