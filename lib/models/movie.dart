@@ -7,6 +7,8 @@ class Movie {
   final double rating;
   final String releaseDate;
   final String mediaType;
+  final List<int> genreIds;
+
   Movie({
     required this.id,
     required this.title,
@@ -16,7 +18,9 @@ class Movie {
     required this.rating,
     required this.releaseDate,
     required this.mediaType,
+    required this.genreIds,
   });
+
   factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
       id: json['id'] ?? 0,
@@ -27,12 +31,17 @@ class Movie {
       rating: (json['vote_average'] ?? 0).toDouble(),
       releaseDate: json['release_date'] ?? json['first_air_date'] ?? '',
       mediaType: json['media_type'] ?? 'movie',
+
+      // TMDB trả về genre_ids cho trending/list endpoint
+      genreIds: List<int>.from(json['genre_ids'] ?? []),
     );
   }
+
   String get posterUrl {
     if (posterPath.isEmpty) {
       return '';
     }
+
     return 'https://image.tmdb.org/t/p/w500$posterPath';
   }
 
@@ -40,6 +49,7 @@ class Movie {
     if (backdropPath.isEmpty) {
       return '';
     }
+
     return 'https://image.tmdb.org/t/p/w1280$backdropPath';
   }
 
@@ -47,6 +57,7 @@ class Movie {
     if (releaseDate.isEmpty) {
       return 'N/A';
     }
+
     return releaseDate.substring(0, 4);
   }
 }
