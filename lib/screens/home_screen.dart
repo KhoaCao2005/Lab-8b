@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'currency_screen.dart';
 import 'movie_screen.dart';
+import 'weather_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,21 @@ class HomeScreen extends StatelessWidget {
             style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
           ),
           const SizedBox(height: 40),
+          _buildFeatureCard(
+            context: context,
+            icon: Icons.cloud,
+            title: 'Weather Companion',
+            description:
+                'Check current weather conditions '
+                'and get practical recommendations.',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WeatherScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
           _buildFeatureCard(
             context: context,
             icon: Icons.movie_outlined,
