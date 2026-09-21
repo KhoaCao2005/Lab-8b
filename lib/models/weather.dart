@@ -68,7 +68,6 @@ class Weather {
     final weatherCode = (current['weather_code'] as num?)?.toInt() ?? 0;
     final conditionInfo = _mapWmoCode(weatherCode);
 
-    // Safely derive Unix timestamp (seconds) regardless of type
     final rawTime = current['time'];
     final int dtValue;
     if (rawTime is num) {
@@ -179,7 +178,6 @@ class CityLocation {
       '${lat.toStringAsFixed(2)}, ${lon.toStringAsFixed(2)}';
 }
 
-/// Helper mapping WMO Weather Interpretation Codes to descriptions and icons
 Map<String, String> _mapWmoCode(int code) {
   switch (code) {
     case 0:

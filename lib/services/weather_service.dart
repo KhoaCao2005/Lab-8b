@@ -119,7 +119,6 @@ class WeatherService {
     return [];
   }
 
-  /// Maps WMO Weather Interpretation Codes to descriptions and icon keys
   Map<String, String> _mapWmoCode(int code) {
     switch (code) {
       case 0:

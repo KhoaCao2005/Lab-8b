@@ -34,6 +34,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
   String _toCurrency = 'VND';
 
   Future<ExchangeRate>? _rateFuture;
+  Future<double>? _averageRateFuture;
 
   double get _amount {
     return double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0;
@@ -54,6 +55,12 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
         from: _fromCurrency,
         to: _toCurrency,
       );
+
+      _averageRateFuture = _currencyService.fetchAverageRate(
+        from: _fromCurrency,
+        to: _toCurrency,
+        days: 30,
+      );
     });
   }
 
@@ -65,6 +72,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
       _toCurrency = oldFrom;
 
       _rateFuture = null;
+      _averageRateFuture = null;
     });
   }
 
@@ -124,7 +132,16 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                             final rate = snapshot.data!;
                             final convertedAmount = rate.convert(_amount);
 
-                            return _buildResult(rate, convertedAmount);
+                            return FutureBuilder<double>(
+                              future: _averageRateFuture,
+                              builder: (context, averageSnapshot) {
+                                return _buildResult(
+                                  rate,
+                                  convertedAmount,
+                                  averageSnapshot,
+                                );
+                              },
+                            );
                           },
                         ),
                     ],
@@ -282,6 +299,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                         setState(() {
                           _fromCurrency = value;
                           _rateFuture = null;
+                          _averageRateFuture = null;
                         });
                       },
                     ),
@@ -306,6 +324,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                         setState(() {
                           _toCurrency = value;
                           _rateFuture = null;
+                          _averageRateFuture = null;
                         });
                       },
                     ),
@@ -326,6 +345,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                         setState(() {
                           _fromCurrency = value;
                           _rateFuture = null;
+                          _averageRateFuture = null;
                         });
                       },
                     ),
@@ -355,6 +375,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                         setState(() {
                           _toCurrency = value;
                           _rateFuture = null;
+                          _averageRateFuture = null;
                         });
                       },
                     ),
@@ -473,7 +494,11 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
   // RESULT
   // ============================================================
 
-  Widget _buildResult(ExchangeRate rate, double convertedAmount) {
+  Widget _buildResult(
+    ExchangeRate rate,
+    double convertedAmount,
+    AsyncSnapshot<double> averageSnapshot,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -533,6 +558,15 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
             rate.date.toIso8601String().substring(0, 10),
           ),
 
+          const SizedBox(height: 8),
+
+          if (averageSnapshot.connectionState == ConnectionState.waiting)
+            _buildAverageLoading()
+          else if (averageSnapshot.hasData)
+            _buildRateHint(rate.rate, averageSnapshot.data!)
+          else
+            _buildHintUnavailable(),
+
           const SizedBox(height: 20),
 
           Container(
@@ -552,6 +586,142 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // RATE HINT
+  // ============================================================
+
+  Widget _buildRateHint(double currentRate, double averageRate) {
+    final differencePercent = ((currentRate - averageRate) / averageRate) * 100;
+
+    String title;
+    String message;
+    IconData icon;
+
+    if (differencePercent > 1) {
+      title = 'Rate is higher than average';
+      message =
+          'The current rate is ${differencePercent.abs().toStringAsFixed(1)}% '
+          'above the 30-day average.';
+      icon = Icons.trending_up;
+    } else if (differencePercent < -1) {
+      title = 'Rate is lower than average';
+      message =
+          'The current rate is ${differencePercent.abs().toStringAsFixed(1)}% '
+          'below the 30-day average.';
+      icon = Icons.trending_down;
+    } else {
+      title = 'Rate is close to average';
+      message = 'The current rate is within 1% of the 30-day average.';
+      icon = Icons.trending_flat;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFF5A6B7C).withOpacity(0.10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF5A6B7C)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF1E4663),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(color: Color(0xFF5A6B7C), height: 1.4),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '30-day average: ${averageRate.toStringAsFixed(6)} '
+                  '${_toCurrency}',
+                  style: const TextStyle(
+                    color: Color(0xFF5A6B7C),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // AVERAGE LOADING
+  // ============================================================
+
+  Widget _buildAverageLoading() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFF5A6B7C).withOpacity(0.10),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF5A6B7C),
+            ),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Checking the current rate against the 30-day average...',
+              style: TextStyle(color: Color(0xFF5A6B7C)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // HINT UNAVAILABLE
+  // ============================================================
+
+  Widget _buildHintUnavailable() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: const Color(0xFF5A6B7C).withOpacity(0.10),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: Color(0xFF5A6B7C)),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Historical rate data is currently unavailable, so no rate hint can be calculated.',
+              style: TextStyle(color: Color(0xFF5A6B7C), height: 1.4),
             ),
           ),
         ],

@@ -241,6 +241,190 @@ class _WeatherScreenState extends State<WeatherScreen> {
     return result.take(8).toList();
   }
 
+  // ============================================================
+  // SIMPLE RECOMMENDATION
+  // ============================================================
+
+  _Recommendation _getRecommendation({
+    required Weather weather,
+    ForecastItem? forecastItem,
+  }) {
+    final temperature = forecastItem?.temperature ?? weather.temperature;
+    final windSpeed = forecastItem?.windSpeed ?? weather.windSpeed;
+    final humidity = forecastItem?.humidity ?? weather.humidity;
+
+    final condition = (forecastItem?.description ?? weather.description)
+        .toLowerCase();
+
+    final pop = ((forecastItem?.pop ?? 0) * 100).round();
+
+    // Rain / thunderstorm conditions
+    final hasRain =
+        condition.contains('rain') ||
+        condition.contains('drizzle') ||
+        condition.contains('thunderstorm');
+
+    // Snow can also make outdoor activities less suitable.
+    final hasSnow = condition.contains('snow');
+
+    // Strong wind
+    if (windSpeed >= 15) {
+      return const _Recommendation(
+        icon: Icons.air,
+        title: 'It may be windy outside',
+        description: 'Consider taking extra care during outdoor activities.',
+      );
+    }
+
+    // Thunderstorm has the highest priority.
+    if (condition.contains('thunderstorm')) {
+      return const _Recommendation(
+        icon: Icons.thunderstorm_outlined,
+        title: 'Avoid outdoor activities',
+        description: 'Thunderstorms are expected. It is safer to stay indoors.',
+      );
+    }
+
+    // Rain or high probability of rain.
+    if (hasRain || pop >= 50) {
+      return _Recommendation(
+        icon: Icons.umbrella_outlined,
+        title: 'Take an umbrella',
+        description: pop > 0
+            ? 'There is about a $pop% chance of precipitation.'
+            : 'Rain is expected in the forecast.',
+      );
+    }
+
+    // Snow.
+    if (hasSnow) {
+      return const _Recommendation(
+        icon: Icons.ac_unit,
+        title: 'Dress warmly',
+        description: 'Snow is expected, so prepare for cold conditions.',
+      );
+    }
+
+    // Very hot weather.
+    if (temperature >= 35) {
+      return const _Recommendation(
+        icon: Icons.wb_sunny_outlined,
+        title: 'Too hot for outdoor sports',
+        description: 'Stay hydrated and avoid prolonged outdoor activity.',
+      );
+    }
+
+    // Hot weather.
+    if (temperature >= 32) {
+      return const _Recommendation(
+        icon: Icons.wb_sunny_outlined,
+        title: 'Stay cool outdoors',
+        description: 'It is quite hot. Take breaks and drink enough water.',
+      );
+    }
+
+    // High humidity + warm temperature.
+    if (temperature >= 28 && humidity >= 80) {
+      return const _Recommendation(
+        icon: Icons.water_drop_outlined,
+        title: 'It may feel humid',
+        description:
+            'Outdoor activity may feel warmer because of high humidity.',
+      );
+    }
+
+    // Comfortable temperature.
+    if (temperature >= 18 && temperature <= 28 && windSpeed < 10) {
+      return const _Recommendation(
+        icon: Icons.directions_walk_outlined,
+        title: 'Nice weather for a walk',
+        description: 'Conditions look comfortable for outdoor activities.',
+      );
+    }
+
+    // Cold weather.
+    if (temperature < 10) {
+      return const _Recommendation(
+        icon: Icons.ac_unit,
+        title: 'Dress warmly',
+        description: 'Temperatures are low, so wear suitable warm clothing.',
+      );
+    }
+
+    // Default dry-weather recommendation.
+    return const _Recommendation(
+      icon: Icons.check_circle_outline,
+      title: 'No umbrella needed',
+      description: 'There is no significant rain expected right now.',
+    );
+  }
+
+  Widget _buildRecommendation({
+    required Weather weather,
+    ForecastItem? forecastItem,
+  }) {
+    final recommendation = _getRecommendation(
+      weather: weather,
+      forecastItem: forecastItem,
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0EBE1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5A6B7C).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              recommendation.icon,
+              color: const Color(0xFF5A6B7C),
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recommendation',
+                  style: TextStyle(color: Color(0xFF5A6B7C), fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  recommendation.title,
+                  style: const TextStyle(
+                    color: Color(0xFF1E4663),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  recommendation.description,
+                  style: const TextStyle(
+                    color: Color(0xFF5A6B7C),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -652,7 +836,14 @@ class _WeatherScreenState extends State<WeatherScreen> {
             ],
           ),
         ),
+
         const SizedBox(height: 16),
+
+        // Simple recommendation
+        _buildRecommendation(weather: data.current, forecastItem: item),
+
+        const SizedBox(height: 16),
+
         LayoutBuilder(
           builder: (context, constraints) {
             final crossAxisCount = constraints.maxWidth < 400 ? 2 : 3;
@@ -737,4 +928,20 @@ class _WeatherScreenState extends State<WeatherScreen> {
       ),
     );
   }
+}
+
+// ============================================================
+// RECOMMENDATION MODEL
+// ============================================================
+
+class _Recommendation {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _Recommendation({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
 }
